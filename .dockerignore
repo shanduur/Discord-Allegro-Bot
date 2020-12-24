@@ -3,3 +3,4 @@ docker-compose.y*ml
 .git/
 LICENSE
 database/
+examples/

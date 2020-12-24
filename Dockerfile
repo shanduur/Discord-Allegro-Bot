@@ -1,11 +1,15 @@
-FROM python
+FROM python:alpine
 
-RUN mkdir -f /opt/bot/
+RUN mkdir /opt/bot/
+
+RUN apk add gcc musl-dev
 
 COPY . /opt/bot/
 
-RUN pip install -r requirements.txt
+RUN pip install -r /opt/bot/requirements.txt
 
-RUN python /opt/bot/helper.py -t create
+RUN cd /opt/bot/ && python helper.py -t create
 
-CMD [ "python", "/opt/bot/main.py" ]
+WORKDIR /opt/bot/
+
+CMD [ "python", "main.py" ]
