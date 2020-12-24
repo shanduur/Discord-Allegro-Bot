@@ -1,6 +1,7 @@
 import requests as req
 import json
 import os
+import sys
 import asyncio
 import discord
 import sqlite3 as sql3
@@ -33,11 +34,11 @@ DELAY = int(os.getenv('DELAY'))
 
 def d_print(*args):
     if __DEBUG__:
-        print(*args)
+        print(*args, file=sys.stderr)
 
 
 def log_error(*args):
-    print('ERROR ', *args)
+    print('ERROR ', *args, file=sys.stderr)
 
 
 """
