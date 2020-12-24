@@ -362,9 +362,6 @@ async def bgCheck():
 
             checked = []
 
-            if len(valid) > 0:
-                result = result + product['name'] + '\n'
-
             for v in valid:
                 try:
                     ret = compareChecked(DB_LOCATION, v)
@@ -374,6 +371,9 @@ async def bgCheck():
                 except IndexError:
                     addChecked(DB_LOCATION, v)
                     checked.append(v)
+
+            if len(checked) > 0:
+                result = result + product['name'] + '\n'
 
             for c in checked:
                 result = result + c['url'] + '\n'
