@@ -48,10 +48,7 @@ Database
 """
 
 
-def readProductsJSON(name: str):
-    with open(name) as f:
-        data = f.read().replace('\n', '')
-
+def readProductsJSON(data: str):
     products = json.loads(data)
 
     return products['products']
@@ -273,11 +270,11 @@ async def checkAll(ctx):
         await ctx.send('I am unable to check all products! Sorry...')
 
 
-@bot.group(description='Perform Allegro check on single product from the list')
-async def check(ctx):
+@bot.command(description='Perform Allegro check on single product from the list', pass_context=True)
+async def check(ctx,*,message):
     try:
         result = ""
-        id = int(ctx.subcommand_passed)
+        id = int(message)
         products = readProductDB(DB_LOCATION, id)
         token = getToken()
         for product in products:
@@ -298,7 +295,7 @@ async def check(ctx):
         await ctx.send("You provided wrong ID. To check the ID, please call `|listProducts` command.")
 
 
-@bot.command(description='Show all products on the list')
+@bot.command(description='Show all products on the list', pass_context=True)
 async def listProducts(ctx):
     try:
         products = getTableValues(DB_LOCATION)
@@ -309,6 +306,24 @@ async def listProducts(ctx):
     except Exception as exc:
         log_error(exc)
         await ctx.send('I am unable to list products! Sorry...')
+
+
+@bot.command(description='Load full JSON object from message', pass_context=True)
+async def addJSON(ctx,*,message):
+    try:
+        items = readProductsJSON(message)
+        for item in items:
+            try:
+                addProductToDB(DB_LOCATION, item)
+            except sql3.Error as exc:
+                log_error(exc)
+                await ctx.send(exc)
+    except json.JSONDecodeError as exc:
+        log_error(exc)
+        await ctx.send('Wrong format! Correct format is:\n```json\n{"name":"name of product","max-price":123.00}\n```\n')
+    except TypeError as exc:
+        log_error(exc)
+        await ctx.send('Wrong format! Correct format is:\n```json\n{"name":"name of product","max-price":123.00}\n```\n')
 
 
 @bot.command(description='Add single product to the list', pass_context=True)
