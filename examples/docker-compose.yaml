@@ -1,0 +1,13 @@
+version: '3'
+
+services:
+  app:
+    build: .
+    environment:
+      - DELAY=60
+      - DEBUG=True
+      - PRODUCTION=True
+      - CLIENT_ID=
+      - CLIENT_SECRET=
+      - SANDBOX_ID=
+      - SANDBOX_SECRET=

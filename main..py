@@ -6,34 +6,46 @@ import discord
 import sqlite3 as sql3
 from discord.ext import commands, tasks
 
-__DEBUG__ = False
-__PRODUCTION__ = False
 
-BOT_TOKEN = r'discord bot token here'
+if os.getenv('DEBUG') == 'False':
+    __DEBUG__ = False
+else: 
+    __DEBUG__ = False
+
+if os.getenv('PRODUCTION') == 'False':
+    __PRODUCTION__ = False
+else:
+    __PRODUCTION__ = True
+
+BOT_TOKEN = os.getenv('BOT_TOKEN')
 DB_LOCATION = 'database/allegro.db'
 
 if __PRODUCTION__:
     SANDBOX_URL = r''
-    CLIENT_ID = 'allegro rest api client id'
-    CLIENT_SECRET = 'allegro rest api client secret'
+    CLIENT_ID = os.getenv('CLIENT_ID')
+    CLIENT_SECRET = os.getenv('CLIENT_SECRET')
 else:
     SANDBOX_URL = r'.allegrosandbox.pl'
-    CLIENT_ID = 'allegrosandbox rest api client id'
-    CLIENT_SECRET = 'allegrosandbox rest api client secret'
+    CLIENT_ID = os.getenv('SANDBOX_ID')
+    CLIENT_SECRET = os.getenv('SANDBOX_SECRET')
 
+DELAY = int(os.getenv('DELAY'))
 
 def d_print(*args):
     if __DEBUG__:
         print(*args)
 
+
 def log_error(*args):
     print('ERROR ', *args)
+
 
 """
 -----------------------------------------------------------------------------------------
 Database
 -----------------------------------------------------------------------------------------
 """
+
 
 def readProductsJSON(name: str):
     with open(name) as f:
@@ -140,6 +152,7 @@ def compareChecked(location: str, product: dict):
     else:
         return 0
 
+
 def updateChecked(location: str, product: dict):
     query = "UPDATE checked SET price = {price} WHERE id = {id}"
 
@@ -147,6 +160,7 @@ def updateChecked(location: str, product: dict):
     conn.execute(query.format(id=product['id'], price=product['price']))
     conn.commit()
     conn.close()
+
 
 """
 -----------------------------------------------------------------------------------------
@@ -226,6 +240,7 @@ def getValidProducts(products: dict, validation: dict):
                     })
     
     return valid
+
 
 """
 -----------------------------------------------------------------------------------------
@@ -342,11 +357,13 @@ async def bgCheck():
         products = readProductsDB(DB_LOCATION)
         token = getToken()
         for product in products:
-            result = result + product['name'] + '\n'
             info = getInfo(token, product)
             valid = getValidProducts(info['items'], product)
 
             checked = []
+
+            if len(valid) > 0:
+                result = result + product['name'] + '\n'
 
             for v in valid:
                 try:
@@ -362,7 +379,7 @@ async def bgCheck():
                 result = result + c['url'] + '\n'
 
         await channel.send(result)
-        await asyncio.sleep(60*10)
+        await asyncio.sleep(DELAY)
 
 
 @bot.event

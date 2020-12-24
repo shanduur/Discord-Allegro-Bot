@@ -1,6 +1,7 @@
 import sqlite3
 import json
 import argparse
+import os
 
 DATABASE = 'database/allegro.db'
 
@@ -42,14 +43,9 @@ def create():
     for l in d_prod['products']:
         conn.execute(query.format(name=l['name'], price=l['max-price']))
     conn.commit()
-
-    cur = conn.cursor()
-    cur.execute('SELECT name, maxPrice FROM products')
-    products = cur.fetchall()
-    cur.close()
     conn.close()
 
-    print(products)
+    print('ok')
 
 
 def truncate():
@@ -59,6 +55,7 @@ def truncate():
         ''')
     conn.commit()
     conn.close()
+    print('ok')
 
 
 def show():
@@ -79,12 +76,23 @@ def show():
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument('-t', type=str)
-    args = parser.parse_args()
-    if args.t == 'create':
-        create()
-    elif args.t == 'truncate':
-        truncate()
-    else:
-        show()
+    try:
+        parser = argparse.ArgumentParser()
+        parser.add_argument('-t', type=str)
+        args = parser.parse_args()
+        if not os.path.exists('database'):
+            os.makedirs('database')
+            create()
+        if args.t == 'create':
+            create()
+        elif args.t == 'truncate':
+            truncate()
+        else:
+            try:
+                show()
+            except sqlite3.OperationalError:
+                create()
+                show()
+    except KeyboardInterrupt:
+        print('Keyboard interrupt was caught.')
+        exit(0)
