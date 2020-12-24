@@ -377,8 +377,10 @@ async def bgCheck():
 
             for c in checked:
                 result = result + c['url'] + '\n'
-
-        await channel.send(result)
+        try:
+            await channel.send(result)
+        except discord.errors.HTTPException:
+            pass
         await asyncio.sleep(DELAY)
 
 
