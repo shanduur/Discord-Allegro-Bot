@@ -10,7 +10,7 @@ from discord.ext import commands, tasks
 
 if os.getenv('DEBUG') == 'False':
     __DEBUG__ = False
-else: 
+else:
     __DEBUG__ = True
 
 if os.getenv('PRODUCTION') == 'False':
@@ -31,6 +31,7 @@ else:
     CLIENT_SECRET = os.getenv('SANDBOX_SECRET')
 
 DELAY = int(os.getenv('DELAY'))
+
 
 def d_print(*args, **kwargs):
     if __DEBUG__:
@@ -57,7 +58,7 @@ def readProductsJSON(data: str):
 def readProductsDB(location: str):
     conn = sql3.connect(location)
     cur = conn.cursor()
-    cur.execute('SELECT name, maxPrice FROM products')
+    cur.execute('SELECT name, maxPrice, minPrice FROM products')
     fetched = cur.fetchall()
     cur.close()
     conn.close()
@@ -67,7 +68,8 @@ def readProductsDB(location: str):
     for p in fetched:
         products.append({
             'name': p[0],
-            'max-price': p[1]
+            'max-price': p[1],
+            'min-price': p[2],
         })
 
     return products
@@ -76,7 +78,7 @@ def readProductsDB(location: str):
 def getTableValues(location: str):
     conn = sql3.connect(location)
     cur = conn.cursor()
-    cur.execute('SELECT id, name, maxPrice FROM products')
+    cur.execute('SELECT id, name, maxPrice, minPrice FROM products')
     products = cur.fetchall()
     cur.close()
     conn.close()
@@ -85,10 +87,11 @@ def getTableValues(location: str):
 
 
 def addProductToDB(location: str, product: dict):
-    query = "INSERT INTO products(name, maxPrice) VALUES('{name}', {price})"
+    query = "INSERT INTO products(name, maxPrice, minPrice) VALUES('{name}', {maxprice}, {minprice})"
 
     conn = sql3.connect(location)
-    conn.execute(query.format(name=product['name'], price=product['max-price']))
+    conn.execute(query.format(
+        name=product['name'], maxprice=product['max-price'], minprice=product['min-price']))
     conn.commit()
     conn.close()
 
@@ -100,10 +103,10 @@ def removeProductFromDB(location: str, id: int):
     conn.execute(query.format(id=id))
     conn.commit()
     conn.close()
- 
+
 
 def readProductDB(location: str, id: int):
-    query = 'SELECT name, maxPrice FROM products WHERE id = {id}'
+    query = 'SELECT name, maxPrice, minPrice FROM products WHERE id = {id}'
 
     conn = sql3.connect(location)
     cur = conn.cursor()
@@ -117,7 +120,8 @@ def readProductDB(location: str, id: int):
     for p in fetched:
         products.append({
             'name': p[0],
-            'max-price': p[1]
+            'max-price': p[1],
+            'min-price': p[2]
         })
 
     return products
@@ -127,7 +131,8 @@ def addChecked(location: str, product: dict):
     query = "INSERT INTO checked(id, price, url) VALUES('{id}', {price}, '{url}')"
 
     conn = sql3.connect(location)
-    conn.execute(query.format(id=product['id'], price=product['price'], url=product['url']))
+    conn.execute(query.format(
+        id=product['id'], price=product['price'], url=product['url']))
     conn.commit()
     conn.close()
 
@@ -158,6 +163,26 @@ def updateChecked(location: str, product: dict):
     conn.close()
 
 
+def getChecked(location: str):
+    query = "SELECT * FROM checked"
+    conn = sql3.connect(location)
+    cur = conn.cursor()
+    cur.execute(query)
+    fetched = cur.fetchall()
+    cur.close()
+
+    ret = []
+
+    for f in fetched:
+        ret.append({
+            'id': f[0],
+            'price': f[1],
+            'url': f[2],
+        })
+
+    return ret
+
+
 """
 -----------------------------------------------------------------------------------------
 Allegro API
@@ -166,7 +191,8 @@ Allegro API
 
 
 def getToken():
-    AUTH_URL = r'https://allegro.pl'+SANDBOX_URL+r'/auth/oauth/token?grant_type=client_credentials'
+    AUTH_URL = r'https://allegro.pl'+SANDBOX_URL + \
+        r'/auth/oauth/token?grant_type=client_credentials'
 
     res = req.get(AUTH_URL, auth=(CLIENT_ID, CLIENT_SECRET))
     if not res.ok:
@@ -203,10 +229,12 @@ def getValidLinks(products: dict, validation: dict):
             d_print(item, '\n-----')
             try:
                 if item['vendor']['id'] == 'ALLEGRO_LOKALNIE':
-                    if float(item['sellingMode']['price']['amount']) <= float(validation['max-price']):
+                    if (float(item['sellingMode']['price']['amount']) <= float(validation['max-price']) and
+                            float(item['sellingMode']['price']['amount']) >= float(validation['min-price'])):
                         valid.append(item['vendor']['url'])
             except:
-                if float(item['sellingMode']['price']['amount']) <= float(validation['max-price']):
+                if (float(item['sellingMode']['price']['amount']) <= float(validation['max-price']) and
+                        float(item['sellingMode']['price']['amount']) >= float(validation['min-price'])):
                     valid.append(BASE_URL+item['id'])
 
     return valid
@@ -221,20 +249,22 @@ def getValidProducts(products: dict, validation: dict):
             d_print(item, '\n-----')
             try:
                 if item['vendor']['id'] == 'ALLEGRO_LOKALNIE':
-                    if float(item['sellingMode']['price']['amount']) <= float(validation['max-price']):
+                    if (float(item['sellingMode']['price']['amount']) <= float(validation['max-price']) and
+                            float(item['sellingMode']['price']['amount']) >= float(validation['min-price'])):
                         valid.append({
                             'id': item['id'],
                             'price': float(item['sellingMode']['price']['amount']),
                             'url': item['vendor']['url']
                         })
             except:
-                if float(item['sellingMode']['price']['amount']) <= float(validation['max-price']):
+                if (float(item['sellingMode']['price']['amount']) <= float(validation['max-price']) and
+                        float(item['sellingMode']['price']['amount']) >= float(validation['min-price'])):
                     valid.append({
                         'id': item['id'],
                         'price': float(item['sellingMode']['price']['amount']),
                         'url': BASE_URL+item['id']
                     })
-    
+
     return valid
 
 
@@ -247,7 +277,8 @@ BOT
 
 intents = discord.Intents.default()
 intents.members = True
-bot = commands.Bot(command_prefix='|', description='AllegroBot', intents=intents)
+bot = commands.Bot(command_prefix='|',
+                   description='AllegroBot', intents=intents)
 
 
 @bot.command(description='Perform Allegro check on all the products from the list')
@@ -263,15 +294,47 @@ async def checkAll(ctx):
 
             for v in valid:
                 result = result + v + '\n'
-                
-        await ctx.send(result) 
+                if len(result) >= 1500:
+                    try:
+                        await ctx.send(result)
+                        result = ""
+                    except req.HTTPError as exc:
+                        log_error(exc)
+                        await ctx.send('I am unable to check all products! Sorry...')
+
+        await ctx.send(result)
     except req.HTTPError as exc:
         log_error(exc)
         await ctx.send('I am unable to check all products! Sorry...')
 
 
+@bot.command(description='List all checked products')
+async def listChecked(ctx):
+    try:
+        products = getChecked(DB_LOCATION)
+        result = ""
+
+        for p in products:
+            result = result + str(p['price']) + ' @ ' + str(p['url']) + '\n'
+            if len(result) >= 1500:
+                try:
+                    d_print(result)
+                    await ctx.send(result)
+                    result = ""
+                except discord.errors.HTTPException as exc:
+                    log_error(exc)
+                    result = ""
+
+        d_print(result)
+        await ctx.send(result)
+        result = ""
+    except discord.errors.HTTPException as exc:
+        log_error(exc)
+        result = ""
+
+
 @bot.command(description='Perform Allegro check on single product from the list', pass_context=True)
-async def check(ctx,*,message):
+async def check(ctx, *, message):
     try:
         result = ""
         id = int(message)
@@ -284,10 +347,21 @@ async def check(ctx,*,message):
             valid = getValidLinks(info['items'], product)
 
             for v in valid:
-                result = result + v + '\n' 
+                result = result + v + '\n'
+                if len(result) > 1500:
+                    try:
+                        d_print(result)
+                        await ctx.send(result)
+                        result = ""
+                    except discord.errors.HTTPException as exc:
+                        log_error(exc)
+                        result = ""
 
-        await ctx.send(result) 
+        await ctx.send(result)
     except req.HTTPError as exc:
+        log_error(exc)
+        await ctx.send('I am unable to check all products! Sorry...')
+    except discord.errors.HTTPException as exc:
         log_error(exc)
         await ctx.send('I am unable to check all products! Sorry...')
     except ValueError as exc:
@@ -299,9 +373,10 @@ async def check(ctx,*,message):
 async def listProducts(ctx):
     try:
         products = getTableValues(DB_LOCATION)
-        result = "id | name | max price\n"
+        result = "id | name | max price | min price\n"
         for p in products:
-            result = result + str(p[0]) + ' | ' + p[1] + ' | ' + str(p[2]) + '\n'
+            result = result + str(p[0]) + ' | ' + p[1] + \
+                ' | ' + str(p[2]) + ' | ' + str(p[3]) + '\n'
         await ctx.send(result)
     except Exception as exc:
         log_error(exc)
@@ -309,7 +384,7 @@ async def listProducts(ctx):
 
 
 @bot.command(description='Load full JSON object from message', pass_context=True)
-async def addJSON(ctx,*,message):
+async def addJSON(ctx, *, message):
     try:
         items = readProductsJSON(message)
         for item in items:
@@ -327,7 +402,7 @@ async def addJSON(ctx,*,message):
 
 
 @bot.command(description='Add single product to the list', pass_context=True)
-async def add(ctx,*,message):
+async def add(ctx, *, message):
     try:
         d_print(message)
         product = json.loads(message)
@@ -343,11 +418,14 @@ async def add(ctx,*,message):
         log_error(exc)
         await ctx.send(exc)
     else:
-        await ctx.send('Gratz! Added {prod} with maximal price of {price}.'.format(prod=product['name'], price=product['max-price']))
+        await ctx.send('Gratz! Added {prod} with maximal price of {maxprice} and minimal price of {minprice}.'.format(
+            prod=product['name'],
+            maxprice=product['max-price'],
+            minprice=product['min-price']))
 
 
 @bot.command(description='Delete single product from the list', pass_context=True)
-async def delete(ctx,*,message):
+async def delete(ctx, *, message):
     try:
         id = int(message)
         d_print(id)
@@ -375,6 +453,8 @@ async def bgCheck():
             info = getInfo(token, product)
             valid = getValidProducts(info['items'], product)
 
+            d_print(valid)
+
             checked = []
 
             for v in valid:
@@ -392,10 +472,19 @@ async def bgCheck():
 
             for c in checked:
                 result = result + c['url'] + '\n'
+                if len(result) >= 1500:
+                    try:
+                        d_print(result)
+                        await channel.send(result)
+                        result = ""
+                    except discord.errors.HTTPException as exc:
+                        log_error(exc)
+                        result = ""
         try:
+            d_print(result)
             await channel.send(result)
-        except discord.errors.HTTPException:
-            pass
+        except discord.errors.HTTPException as exc:
+            log_error(exc)
         await asyncio.sleep(DELAY)
 
 

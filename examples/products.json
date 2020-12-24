@@ -1,32 +1,19 @@
 {
     "products": [
         {
-            "name": "GTX 980 Ti",
-            "max-price": 350.0
+            "name": "GTX 3090",
+            "max-price": 3500.0,
+            "min-price": 1100.0
         },
         {
-            "name": "GTX 1080",
-            "max-price": 600.0
+            "name": "Asus Zenbook",
+            "max-price": 1800.0,
+            "min-price": 1100.0
         },
         {
-            "name": "GTX 1080 Ti",
-            "max-price": 750.0
-        },
-        {
-            "name": "RTX 2060 Super",
-            "max-price": 900.0
-        },
-        {
-            "name": "RTX 2070",
-            "max-price": 1000.0
-        },
-        {
-            "name": "RTX 2070 Super",
-            "max-price": 1200.0
-        },
-        {
-            "name": "RTX 3060 Ti",
-            "max-price": 1400.0
+            "name": "Slownik jezyka polskiego",
+            "max-price": 25.0,
+            "min-price": 90.0
         }
     ]
 }

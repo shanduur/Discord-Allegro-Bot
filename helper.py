@@ -5,6 +5,7 @@ import os
 
 DATABASE = 'database/allegro.db'
 
+
 def create():
     conn = sqlite3.connect(DATABASE)
     try:
@@ -17,7 +18,8 @@ def create():
         CREATE TABLE products (
             id INTEGER PRIMARY KEY,
             name TEXT, 
-            maxPrice REAL
+            maxPrice REAL,
+            minPrice REAL
         )
         ''')
     conn.execute('''
@@ -38,10 +40,11 @@ def create():
 
     d_prod = json.loads(data)
 
-    query = "INSERT INTO products(name, maxPrice) VALUES('{name}', {price})"
+    query = "INSERT INTO products(name, maxPrice, minPrice) VALUES('{name}', {maxprice}, {minprice})"
 
     for l in d_prod['products']:
-        conn.execute(query.format(name=l['name'], price=l['max-price']))
+        conn.execute(query.format(
+            name=l['name'], maxprice=l['max-price'], minprice=l['min-price']))
     conn.commit()
     conn.close()
 
@@ -61,7 +64,7 @@ def truncate():
 def show():
     conn = sqlite3.connect(DATABASE)
     cur = conn.cursor()
-    cur.execute('SELECT name, maxPrice FROM products')
+    cur.execute('SELECT name, maxPrice, minPrice FROM products')
     products = cur.fetchall()
     cur.execute('SELECT * FROM checked')
     checked = cur.fetchall()
