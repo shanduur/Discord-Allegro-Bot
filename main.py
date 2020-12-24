@@ -11,7 +11,7 @@ from discord.ext import commands, tasks
 if os.getenv('DEBUG') == 'False':
     __DEBUG__ = False
 else: 
-    __DEBUG__ = False
+    __DEBUG__ = True
 
 if os.getenv('PRODUCTION') == 'False':
     __PRODUCTION__ = False
@@ -32,13 +32,13 @@ else:
 
 DELAY = int(os.getenv('DELAY'))
 
-def d_print(*args):
+def d_print(*args, **kwargs):
     if __DEBUG__:
-        print(*args, file=sys.stderr)
+        print('DEBUG ', *args, file=sys.stderr, **kwargs)
 
 
-def log_error(*args):
-    print('ERROR ', *args, file=sys.stderr)
+def log_error(*args, **kwargs):
+    print('ERROR ', *args, file=sys.stderr, **kwargs)
 
 
 """
@@ -143,8 +143,6 @@ def compareChecked(location: str, product: dict):
     cur.execute(query.format(id=product['id']))
     fetched = cur.fetchall()
     cur.close()
-
-    d_print(type(fetched[0][0]))
 
     if fetched[0][0] > product['price']:
         return 1
@@ -313,10 +311,11 @@ async def listProducts(ctx):
         await ctx.send('I am unable to list products! Sorry...')
 
 
-@bot.group(description='Add single product to the list')
-async def add(ctx):
+@bot.command(description='Add single product to the list', pass_context=True)
+async def add(ctx,*,message):
     try:
-        product = json.loads(ctx.subcommand_passed)
+        d_print(message)
+        product = json.loads(message)
         d_print(product)
         addProductToDB(DB_LOCATION, product)
     except json.JSONDecodeError as exc:
@@ -332,10 +331,10 @@ async def add(ctx):
         await ctx.send('Gratz! Added {prod} with maximal price of {price}.'.format(prod=product['name'], price=product['max-price']))
 
 
-@bot.group(description='Delete single product from the list')
-async def delete(ctx):
+@bot.command(description='Delete single product from the list', pass_context=True)
+async def delete(ctx,*,message):
     try:
-        id = int(ctx.subcommand_passed)
+        id = int(message)
         d_print(id)
         removeProductFromDB(DB_LOCATION, id)
     except sql3.Error as exc:
@@ -387,10 +386,10 @@ async def bgCheck():
 
 @bot.event
 async def on_ready():
-    print('Logged in as')
-    print(bot.user.name)
-    print(bot.user.id)
-    print('------')
+    d_print('Logged in as')
+    d_print(bot.user.name)
+    d_print(bot.user.id)
+    d_print('------')
 
     bgCheck.start()
 
